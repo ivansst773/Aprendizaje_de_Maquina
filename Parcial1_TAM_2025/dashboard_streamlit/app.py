@@ -1,35 +1,28 @@
 import pandas as pd
 import numpy as np
 import joblib
-from sklearn.base import BaseEstimator, TransformerMixin
+import streamlit as st
 
-# Simular Streamlit si no está disponible (para pruebas en Colab)
-try:
-    import streamlit as st
-except ModuleNotFoundError:
-    class StreamlitMock:
-        def __getattr__(self, name):
-            return lambda *args, **kwargs: None
-    st = StreamlitMock()
-    print("⚠️ Streamlit no está instalado. Modo de prueba activado.")
+st.set_page_config(page_title="Dashboard TAM", layout="wide")
 
-# Configuración
-if hasattr(st, 'set_page_config'):
-    st.set_page_config(page_title="Dashboard TAM", layout="wide")
-
-# Cargar modelos
 @st.cache_resource
 def load_models():
-    modelos = {
-        "Lasso": joblib.load("lasso_model.pkl"),
-        "Random Forest": joblib.load("random_forest_model.pkl"),
-        "Gaussian Process": joblib.load("gpr_model.pkl")
+    return {
+        "Lasso": joblib.load("Parcial1_TAM_2025/dashboard_streamlit/lasso_model.pkl"),
+        "Random Forest": joblib.load("Parcial1_TAM_2025/dashboard_streamlit/random_forest_model.pkl"),
+        "Gaussian Process": joblib.load("Parcial1_TAM_2025/dashboard_streamlit/gpr_model.pkl")
     }
-    return modelos
 
-# Interfaz
-if hasattr(st, 'title'):
-    st.title("Comparación de Modelos")
-    model_choice = st.selectbox("Modelo:", list(load_models().keys()))
-    if st.button("Predecir"):
-        st.write("Predicción simulada (instala Streamlit para funcionalidad completa)")
+st.title("Comparación de Modelos Predictivos")
+
+# Widgets de entrada
+feature1 = st.number_input("Área construida (m²)", min_value=50, value=120)
+feature2 = st.number_input("Habitaciones", min_value=1, value=3)
+
+if st.button("Predecir"):
+    try:
+        model = load_models()[st.selectbox("Modelo:", list(load_models().keys()))]
+        prediction = model.predict([[feature1, feature2]])[0]
+        st.success(f"Precio estimado: ${prediction:,.2f} USD")
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
