@@ -15,7 +15,7 @@ streamlit run Parcial1_TAM_2025/dashboard_streamlit/app.py
 ```
 
 ## Visualización en línea
-- [Enlace al Dashboard en Streamlit](https://tudashboard.streamlit.app) *(reemplaza con tu URL)*
+- [Enlace al Dashboard en Streamlit] https://aprendizajedemaquina-rbtstbmfksfgk558hnmlmw.streamlit.app/
 
 ## Datos utilizados
 - Dataset: [Ames Housing Dataset](https://www.kaggle.com/datasets/shashanknecrothapa/ames-housing-dataset)
