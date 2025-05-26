@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-import streamlit as st
-import pandas as pd
-import joblib
-=======
 import os
 import pandas as pd
 import numpy as np
@@ -10,12 +5,10 @@ import streamlit as st
 import joblib
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV
->>>>>>> 1f704d3 (Actualización del Dashboard Streamlit funcionando)
 
 # Configurar página en Streamlit
 st.set_page_config(page_title="Dashboard TAM", layout="wide")
 
-<<<<<<< HEAD
 # -----------------------
 # Cargar modelos
 # -----------------------
@@ -73,7 +66,6 @@ if uploaded_file is not None:
 
 else:
     st.info("Por favor, sube un archivo CSV con los datos de entrada.")
-=======
 # ================================
 # 🏗️ Cargar modelos entrenados
 # ================================
@@ -182,4 +174,3 @@ if st.button("Predecir") and models:
 
     except Exception as e:
         st.error(f"Error en la predicción: {str(e)}")
->>>>>>> 1f704d3 (Actualización del Dashboard Streamlit funcionando)
