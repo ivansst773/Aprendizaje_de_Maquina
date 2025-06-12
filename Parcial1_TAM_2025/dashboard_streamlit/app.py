@@ -9,6 +9,7 @@ from sklearn.model_selection import GridSearchCV
 # Configurar página en Streamlit
 st.set_page_config(page_title="Dashboard TAM", layout="wide")
 
+<<<<<<< HEAD
 # -----------------------
 # Cargar modelos
 # -----------------------
@@ -78,6 +79,20 @@ def load_models():
         "Gaussian Process": os.path.join(base_path, "gpr_model.pkl")
     }
 
+=======
+# ================================
+# 🏗️ Cargar modelos entrenados
+# ================================
+@st.cache_resource
+def load_models():
+    base_path = os.path.dirname(__file__)
+    model_paths = {
+        "Lasso": os.path.join(base_path, "lasso_model.pkl"),
+        "Random Forest": os.path.join(base_path, "random_forest_model.pkl"),
+        "Gaussian Process": os.path.join(base_path, "gpr_model.pkl")
+    }
+
+>>>>>>> 494d18bfa0957c764a58cb886b4915c66295c3e3
     models = {}
     for name, path in model_paths.items():
         try:
@@ -173,4 +188,8 @@ if st.button("Predecir") and models:
             st.error("Error: No se encontró el modelo seleccionado.")
 
     except Exception as e:
+<<<<<<< HEAD
         st.error(f"Error en la predicción: {str(e)}")
+=======
+        st.error(f"Error en la predicción: {str(e)}")
+>>>>>>> 494d18bfa0957c764a58cb886b4915c66295c3e3
