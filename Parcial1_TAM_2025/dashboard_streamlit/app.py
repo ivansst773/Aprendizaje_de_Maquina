@@ -3,193 +3,136 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import joblib
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
-from sklearn.model_selection import GridSearchCV
 
-# Configurar página en Streamlit
-st.set_page_config(page_title="Dashboard TAM", layout="wide")
+# ✅ Función necesaria para cargar gpr_model.pkl
+def to_dense(X):
+    return X.toarray()
 
-<<<<<<< HEAD
-# -----------------------
-# Cargar modelos
-# -----------------------
+# ===================== CONFIGURACIÓN DE PÁGINA =====================
+st.set_page_config(page_title="Dashboard TAM - Ames Housing", layout="wide")
+
+# ===================== CARGA DE MODELOS ============================
 @st.cache_resource
-def load_models():
-    lasso = joblib.load("lasso_model.pkl")
-    rf = joblib.load("random_forest_model.pkl")
-    gpr = joblib.load("gpr_model.pkl")
-    return {
-        "Lasso": lasso,
-        "Random Forest": rf,
-        "Gaussian Process": gpr
-    }
+def cargar_modelos():
+    base_path = os.path.dirname(__file__)
+    modelos = {}
+    try:
+        modelos["Lasso"] = joblib.load(os.path.join(base_path, "lasso_model.pkl"))
+        modelos["Random Forest"] = joblib.load(os.path.join(base_path, "random_forest_model.pkl"))
+        modelos["Gaussian Process"] = joblib.load(os.path.join(base_path, "gpr_model.pkl"))
+    except Exception as e:
+        st.error(f"Error cargando modelos: {e}")
+    return modelos
 
-models = load_models()
+modelos = cargar_modelos()
 
-# -----------------------
-# Título
-# -----------------------
-st.title("🏠 Dashboard de Predicción - Ames Housing")
-st.markdown("Sube un archivo CSV con las mismas columnas que el dataset original (excepto la columna 'SalePrice').")
+# ===================== TÍTULO Y DESCRIPCIÓN ========================
+st.title("🏠 Dashboard de Predicción y Comparación de Modelos - Ames Housing")
+st.markdown("""
+**Parcial 1 TAM 2025-1**  
+Visualiza y compara el desempeño de los mejores modelos de regresión para el Ames Housing Dataset.
+""")
 
-# -----------------------
-# Subida de archivo CSV
-# -----------------------
-uploaded_file = st.file_uploader("Sube tu archivo CSV", type=["csv"])
+# ===================== CARGA Y VISTA DEL DATASET ==================
+st.header("1. Exploración del Dataset")
+uploaded_file = st.file_uploader("Sube tu archivo CSV de prueba (sin columna 'SalePrice')", type=["csv"])
 
 if uploaded_file is not None:
-    input_df = pd.read_csv(uploaded_file)
-
-    st.subheader("Vista previa del dataset:")
-    st.dataframe(input_df.head())
-
-    # Selección de modelo
-    selected_model_name = st.selectbox("Selecciona el modelo para predecir:", list(models.keys()))
-    selected_model = models[selected_model_name]
-
-    # Botón para predecir
-    if st.button("Predecir precios"):
-        try:
-            y_pred = selected_model.predict(input_df)
-            input_df["Predicted_Price"] = y_pred
-
-            st.subheader("🔮 Predicciones:")
-            st.dataframe(input_df[["Predicted_Price"]].head())
-
-            st.download_button(
-                label="📥 Descargar resultados",
-                data=input_df.to_csv(index=False).encode("utf-8"),
-                file_name="predicciones_ames.csv",
-                mime="text/csv"
-            )
-        except Exception as e:
-            st.error(f"Error al predecir: {e}")
-
+    df = pd.read_csv(uploaded_file)
+    st.dataframe(df.head())
+    st.markdown("*Vista previa de tus datos de entrada.*")
+    st.write(df.describe(include='all'))
 else:
-    st.info("Por favor, sube un archivo CSV con los datos de entrada.")
-# ================================
-# 🏗️ Cargar modelos entrenados
-# ================================
-@st.cache_resource
-def load_models():
-    base_path = os.path.dirname(__file__)
-    model_paths = {
-        "Lasso": os.path.join(base_path, "lasso_model.pkl"),
-        "Random Forest": os.path.join(base_path, "random_forest_model.pkl"),
-        "Gaussian Process": os.path.join(base_path, "gpr_model.pkl")
-    }
+    st.info("No se subió archivo. Se usará el dataset por defecto desde GitHub.")
+    url_default = "https://raw.githubusercontent.com/wblakecannon/ames/master/data/housing.csv"
+    df = pd.read_csv(url_default).drop(columns=["SalePrice"])
+    st.dataframe(df.head())
+    st.markdown("*Vista previa del dataset Ames Housing cargado automáticamente.*")
 
-=======
-# ================================
-# 🏗️ Cargar modelos entrenados
-# ================================
-@st.cache_resource
-def load_models():
-    base_path = os.path.dirname(__file__)
-    model_paths = {
-        "Lasso": os.path.join(base_path, "lasso_model.pkl"),
-        "Random Forest": os.path.join(base_path, "random_forest_model.pkl"),
-        "Gaussian Process": os.path.join(base_path, "gpr_model.pkl")
-    }
+# ===================== ANÁLISIS EXPLORATORIO BÁSICO ===============
+st.header("2. Análisis Exploratorio Rápido")
+st.bar_chart(df.select_dtypes(np.number))
 
->>>>>>> 494d18bfa0957c764a58cb886b4915c66295c3e3
-    models = {}
-    for name, path in model_paths.items():
+# ===================== VALORES REALES PARA COMPARAR ===============
+st.header("3. Comparación con Valores Reales (opcional)")
+real_file = st.file_uploader("Sube el archivo CSV con valores reales ('SalePrice')", type=["csv"], key="real")
+real_values = None
+if real_file is not None:
+    real_df = pd.read_csv(real_file)
+    if "SalePrice" in real_df.columns:
+        real_values = real_df["SalePrice"].values
+        st.success("Archivo de valores reales cargado.")
+    else:
+        st.error("El archivo debe contener la columna 'SalePrice'.")
+
+# ===================== PREDICCIÓN Y COMPARACIÓN DE MODELOS ========
+st.header("4. Evaluación y Comparación de Modelos")
+if modelos:
+    seleccion = st.multiselect(
+        "Selecciona los modelos a comparar:",
+        list(modelos.keys()),
+        default=list(modelos.keys())
+    )
+
+    resultados = {}
+    for modelo_nombre in seleccion:
+        modelo = modelos[modelo_nombre]
         try:
-            models[name] = joblib.load(path)  # Cargar pipeline completo
-        except FileNotFoundError:
-            st.error(f"Error: No se encontró el archivo {path}.")
+            pred = modelo.predict(df)
+            resultados[modelo_nombre] = pred
+            st.subheader(f"Predicciones con {modelo_nombre}")
+            st.write(pred[:5])
         except Exception as e:
-            st.error(f"Error al cargar {name}: {str(e)}")
-    
-    return models
+            st.error(f"Error al predecir con {modelo_nombre}: {e}")
 
-st.title("Comparación de Modelos Predictivos")
+    if real_values is not None:
+        st.subheader("Métricas de Desempeño (MAE, MSE, R2, MAPE)")
+        metricas = []
+        for modelo_nombre, pred in resultados.items():
+            mae = mean_absolute_error(real_values, pred)
+            mse = mean_squared_error(real_values, pred)
+            r2 = r2_score(real_values, pred)
+            mape = np.mean(np.abs((real_values - pred) / real_values)) * 100
+            metricas.append({
+                "Modelo": modelo_nombre,
+                "MAE": mae,
+                "MSE": mse,
+                "R2": r2,
+                "MAPE (%)": mape
+            })
+        met_df = pd.DataFrame(metricas)
+        st.dataframe(met_df)
 
-# ================================
-# 📊 Definir características esperadas por el modelo
-# ================================
-expected_features = [
-    'Bedroom AbvGr', 'Land Contour', 'Sale Type', 'Garage Qual', 'Open Porch SF', 'Yr Sold',
-    'BsmtFin Type 1', 'Heating', 'Garage Type', 'Enclosed Porch', 'Misc Val', 'Overall Qual',
-    'Roof Matl', 'Bsmt Half Bath', '3Ssn Porch', 'Sale Condition', 'Bsmt Full Bath', '2nd Flr SF',
-    'Exter Cond', 'Mas Vnr Area', 'MS Zoning', 'Bldg Type', 'Mo Sold', 'Paved Drive', 'Exterior 2nd',
-    'Overall Cond', 'Central Air', 'Exterior 1st', 'Low Qual Fin SF', 'Garage Cars', 'BsmtFin Type 2',
-    'Screen Porch', 'Bsmt Exposure', 'Kitchen Qual', 'Lot Area', 'Condition 2', 'Garage Finish',
-    'Order', 'Garage Yr Blt', 'Street', 'Exter Qual', 'Functional', 'MS SubClass', 'Lot Frontage',
-    'Full Bath', 'Condition 1', 'Electrical', '1st Flr SF', 'BsmtFin SF 1', 'Pool Area', 'Year Built',
-    'Heating QC', 'Foundation', 'TotRms AbvGrd', 'Lot Config', 'Half Bath', 'Gr Liv Area', 'Garage Area',
-    'Bsmt Unf SF', 'Garage Cond', 'Kitchen AbvGr', 'Bsmt Cond', 'Roof Style', 'BsmtFin SF 2', 'Lot Shape',
-    'Year Remod/Add', 'Bsmt Qual', 'Total Bsmt SF', 'Wood Deck SF', 'Land Slope', 'Neighborhood',
-    'House Style', 'Utilities', 'PID', 'Fireplaces'
-]
+        # 📊 Visualización comparativa de métricas
+        st.subheader("Visualización Comparativa de Métricas")
+        metricas_plot = met_df.set_index("Modelo")[["MAE", "MSE", "R2", "MAPE (%)"]]
+        st.bar_chart(metricas_plot)
 
-# ================================
-# 🏠 Capturar entrada del usuario
-# ================================
-user_input = {}
-for feature in expected_features:
-    user_input[feature] = st.text_input(f"Ingrese {feature}", "0")
-
-# Convertir a DataFrame
-X_input = pd.DataFrame([user_input])
-
-# ================================
-# 🚀 Cargar modelos
-# ================================
-models = load_models()
-
-# ================================
-# 🎯 Aplicar preprocesamiento antes de la predicción
-# ================================
-if st.button("Predecir") and models:
-    try:
-        model_name = st.selectbox("Modelo:", list(models.keys()))
-        model = models.get(model_name)
-
-        if model:
-            X_processed = model.named_steps["preprocess"].transform(X_input)  # Aplicar preprocesamiento
-            prediction = model.named_steps["model"].predict(X_processed)[0]  # Hacer predicción
-            st.success(f"📈 Precio estimado: ${prediction:,.2f} USD")
-            
-            # ================================
-            # 📊 Gráfico de distribución de precios
-            # ================================
-            real_prices = [200000, 220000, 250000, 270000, 300000]  # Casas reales
+        # 🔍 Dispersión Real vs Predicho
+        st.subheader("Dispersión: Valores Reales vs Predichos")
+        for modelo_nombre, pred in resultados.items():
             fig, ax = plt.subplots()
-            ax.hist(real_prices, bins=5, color='skyblue', alpha=0.7, label="Precios reales")
-            ax.axvline(prediction, color="red", linestyle="dashed", linewidth=2, label="Predicción")
-            ax.set_title("Comparación de Precios")
-            ax.set_xlabel("Precio en USD")
-            ax.set_ylabel("Frecuencia")
-            ax.legend()
+            ax.scatter(real_values, pred, alpha=0.5)
+            ax.plot([real_values.min(), real_values.max()], [real_values.min(), real_values.max()], 'r--')
+            ax.set_xlabel("SalePrice Real")
+            ax.set_ylabel("SalePrice Predicho")
+            ax.set_title(f"{modelo_nombre}")
             st.pyplot(fig)
+    else:
+        st.info("Sube el archivo con valores reales para obtener métricas de desempeño.")
 
-            # ================================
-            # 🔥 Optimización del modelo con GridSearchCV
-            # ================================
-            if model_name == "Random Forest":  # Solo optimizamos Random Forest
-                param_grid_rf = {
-                    'model__n_estimators': [50, 100, 200],
-                    'model__max_depth': [None, 10, 20],
-                    'model__min_samples_split': [2, 5],
-                }
-                grid_rf = GridSearchCV(model, param_grid_rf, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-                grid_rf.fit(X_processed, prediction)  # Ajustar modelo
-                best_params = grid_rf.best_params_
+    # Descarga de resultados
+    if resultados:
+        for modelo_nombre, pred in resultados.items():
+            df[f"{modelo_nombre}_Predicted"] = pred
+        st.download_button(
+            label="Descargar archivo con predicciones",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name="predicciones_comparadas.csv",
+            mime="text/csv"
+        )
 
-                # Mostrar resultados de optimización
-                st.write("🔧 **Optimización del modelo:**")
-                st.write(f"Mejor número de árboles (n_estimators): {best_params['model__n_estimators']}")
-                st.write(f"Mejor profundidad máxima (max_depth): {best_params['model__max_depth']}")
-                st.write(f"Mejor mínimo de división de nodos (min_samples_split): {best_params['model__min_samples_split']}")
-
-        else:
-            st.error("Error: No se encontró el modelo seleccionado.")
-
-    except Exception as e:
-<<<<<<< HEAD
-        st.error(f"Error en la predicción: {str(e)}")
-=======
-        st.error(f"Error en la predicción: {str(e)}")
->>>>>>> 494d18bfa0957c764a58cb886b4915c66295c3e3
+# ===================== COMENTARIOS Y AYUDA ========================
+st.markdown("""--- Reemplazo de app.py con nueva versión funcional de Streamlit ---""")
