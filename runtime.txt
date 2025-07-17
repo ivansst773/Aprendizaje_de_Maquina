@@ -1,0 +1,1 @@
+python-3.10.0  # Usa Python 3.10 que es más estable
