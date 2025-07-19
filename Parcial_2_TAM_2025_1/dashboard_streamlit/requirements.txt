@@ -1,8 +1,8 @@
 streamlit
 scikit-learn
-numpy
+umap-learn
 pandas
 matplotlib
-seaborn
-umap-learn
+numpy
+tensorflow
 joblib
