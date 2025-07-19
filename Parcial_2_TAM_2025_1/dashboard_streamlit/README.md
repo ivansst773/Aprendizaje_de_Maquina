@@ -1,10 +1,14 @@
 
-📦 Archivos incluidos
-Archivo	Descripción
-app.py	Código principal del dashboard
-modelo_lr.pkl	Modelo Logistic Regression entrenado
-modelo_rf.pkl	Modelo Random Forest entrenado
-modelo_dl.h5	Modelo CNN entrenado en Keras
+## 📦 Archivos incluidos
+
+| Archivo           | Descripción                          |
+|------------------|--------------------------------------|
+| `app.py`         | Código principal del dashboard       |
+| `modelo_lr.pkl`  | Modelo Logistic Regression entrenado |
+| `modelo_rf.pkl`  | Modelo Random Forest entrenado       |
+| `modelo_dl.h5`   | Modelo CNN entrenado en Keras        |
+
+
 🧪 Funcionalidades del dashboard
 Visualización de proyecciones PCA y UMAP (configurables)
 
@@ -33,5 +37,8 @@ pip install streamlit scikit-learn umap-learn matplotlib pandas tensorflow jobli
 🚀 Despliegue automático (Streamlit Cloud)
 Disponible en: 🔗 https://share.streamlit.io/ivansst773/Aprendizaje_de_Maquina/...
 
-👨‍💻 Autor
-Edgar Ivan Calpa 
+## 👨‍💻 Autor
+
+**Edgar Iván Calpa**  
+Curso TAM – Universidad Nacional de Colombia – sede Manizales
+
