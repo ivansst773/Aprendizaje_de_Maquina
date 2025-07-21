@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, roc_curve, auc
 import joblib
 from tensorflow.keras.models import load_model
+import os
 
 # 🧠 Cargar USPS desde OpenML
 @st.cache_data
@@ -57,15 +58,29 @@ plot_proyeccion(X_umap, y, "Proyección UMAP", "UMAP1", "UMAP2")
 
 st.subheader("🔍 Comparación de modelos supervisados")
 
-# Cargar modelos
-modelo_lr = joblib.load("modelo_lr.pkl")
-modelo_rf = joblib.load("modelo_rf.pkl")
-modelo_dl = load_model("modelo_dl.h5")
+# 📁 Cargar modelos con verificación
+if os.path.exists("modelo_lr.pkl"):
+    modelo_lr = joblib.load("modelo_lr.pkl")
+else:
+    modelo_lr = None
+    st.error("❌ No se encontró el archivo 'modelo_lr.pkl'. Verifica que esté en la carpeta del dashboard y que lo hayas subido vía Git.")
+
+if os.path.exists("modelo_rf.pkl"):
+    modelo_rf = joblib.load("modelo_rf.pkl")
+else:
+    modelo_rf = None
+    st.error("❌ No se encontró el archivo 'modelo_rf.pkl'. Verifica que esté en la carpeta del dashboard y que lo hayas subido vía Git.")
+
+if os.path.exists("modelo_dl.h5"):
+    modelo_dl = load_model("modelo_dl.h5")
+else:
+    modelo_dl = None
+    st.error("❌ No se encontró el archivo 'modelo_dl.h5'. Verifica que esté en la carpeta del dashboard y que lo hayas subido vía Git.")
 
 # Dividir datos
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 🔄 PCA para LR y RF (n_components debe coincidir con el entrenamiento)
+# 🔄 PCA para LR y RF
 pca_clasificacion = PCA(n_components=64)
 X_pca_train = pca_clasificacion.fit_transform(X_train)
 X_pca_test = pca_clasificacion.transform(X_test)
@@ -74,7 +89,7 @@ X_pca_test = pca_clasificacion.transform(X_test)
 X_test_np = X_test.to_numpy()
 X_test_cnn = X_test_np.reshape(-1, 16, 16, 1)
 
-# Función para mostrar métricas y curva ROC
+# 📊 Función para mostrar métricas y curva ROC
 def mostrar_resultados(nombre, y_pred, y_score):
     report = classification_report(y_test, y_pred, output_dict=True)
     st.write({
@@ -101,18 +116,27 @@ tab1, tab2, tab3 = st.tabs(["🔸 Logistic Regression", "🔹 Random Forest", "�
 
 with tab1:
     st.markdown("### 📌 Logistic Regression (64D PCA)")
-    y_pred = modelo_lr.predict(X_pca_test)
-    y_score = modelo_lr.predict_proba(X_pca_test)[:, 0]
-    mostrar_resultados("Logistic Regression", y_pred, y_score)
+    if modelo_lr is not None:
+        y_pred = modelo_lr.predict(X_pca_test)
+        y_score = modelo_lr.predict_proba(X_pca_test)[:, 0]
+        mostrar_resultados("Logistic Regression", y_pred, y_score)
+    else:
+        st.warning("⚠️ El modelo Logistic Regression no está disponible.")
 
 with tab2:
     st.markdown("### 📌 Random Forest (64D PCA)")
-    y_pred = modelo_rf.predict(X_pca_test)
-    y_score = modelo_rf.predict_proba(X_pca_test)[:, 0]
-    mostrar_resultados("Random Forest", y_pred, y_score)
+    if modelo_rf is not None:
+        y_pred = modelo_rf.predict(X_pca_test)
+        y_score = modelo_rf.predict_proba(X_pca_test)[:, 0]
+        mostrar_resultados("Random Forest", y_pred, y_score)
+    else:
+        st.warning("⚠️ El modelo Random Forest no está disponible.")
 
 with tab3:
     st.markdown("### 📌 CNN (Entrada 16×16)")
-    y_pred = modelo_dl.predict(X_test_cnn).argmax(axis=1)
-    y_score = modelo_dl.predict(X_test_cnn)[:, 0]
-    mostrar_resultados("CNN", y_pred, y_score)
+    if modelo_dl is not None:
+        y_pred = modelo_dl.predict(X_test_cnn).argmax(axis=1)
+        y_score = modelo_dl.predict(X_test_cnn)[:, 0]
+        mostrar_resultados("CNN", y_pred, y_score)
+    else:
+        st.warning("⚠️ El modelo CNN no está disponible.")
