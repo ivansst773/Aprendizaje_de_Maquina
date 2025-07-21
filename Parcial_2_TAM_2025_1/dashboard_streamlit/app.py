@@ -25,6 +25,10 @@ X, y = cargar_datos()
 st.set_page_config(page_title="USPS Dashboard", layout="wide")
 st.title("📊 Parcial 2 TAM 2025 – USPS Dashboard")
 
+# 📂 Mostrar archivos que detecta el entorno
+st.sidebar.write("📂 Archivos detectados por Streamlit:")
+st.sidebar.write(os.listdir())
+
 # ============================
 # 🎯 Proyecciones PCA y UMAP
 # ============================
@@ -54,50 +58,48 @@ plot_proyeccion(X_umap, y, "Proyección UMAP", "UMAP1", "UMAP2")
 
 # ============================
 # 🧠 Clasificación Supervisada
-# ============================
+# ============================streamlit run Parcial_2_TAM_2025_1/dashboard_streamlit/app.py
 
 st.subheader("🔍 Comparación de modelos supervisados")
 
 # 📁 Cargar modelos con verificación
-if os.path.exists("modelo_lr.pkl"):
-    modelo_lr = joblib.load("modelo_lr.pkl")
+MODELO_PATH = os.path.dirname(__file__)
+
+if os.path.exists(os.path.join(MODELO_PATH, "modelo_lr.pkl")):
+    modelo_lr = joblib.load(os.path.join(MODELO_PATH, "modelo_lr.pkl"))
 else:
     modelo_lr = None
     st.error("❌ No se encontró el archivo 'modelo_lr.pkl'. Verifica que esté en la carpeta del dashboard y que lo hayas subido vía Git.")
 
-if os.path.exists("modelo_rf.pkl"):
-    modelo_rf = joblib.load("modelo_rf.pkl")
+if os.path.exists(os.path.join(MODELO_PATH, "modelo_rf.pkl")):
+    modelo_rf = joblib.load(os.path.join(MODELO_PATH, "modelo_rf.pkl"))
 else:
     modelo_rf = None
     st.error("❌ No se encontró el archivo 'modelo_rf.pkl'. Verifica que esté en la carpeta del dashboard y que lo hayas subido vía Git.")
 
-if os.path.exists("modelo_dl.h5"):
-    modelo_dl = load_model("modelo_dl.h5")
-else:
-    modelo_dl = None
-    st.error("❌ No se encontró el archivo 'modelo_dl.h5'. Verifica que esté en la carpeta del dashboard y que lo hayas subido vía Git.")
-
 # Dividir datos
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 🔄 PCA para LR y RF
+# Ajustar PCA para clasificación (por ejemplo, 64 componentes)
 pca_clasificacion = PCA(n_components=64)
 X_pca_train = pca_clasificacion.fit_transform(X_train)
 X_pca_test = pca_clasificacion.transform(X_test)
 
-# 🧪 Preparar datos para CNN
-X_test_np = X_test.to_numpy()
-X_test_cnn = X_test_np.reshape(-1, 16, 16, 1)
+# Cargar el modelo CNN
+modelo_dl = load_model(os.path.join(MODELO_PATH, "modelo_dl.h5"))
+
+# Preparar datos de test para la CNN
+X_test_cnn = X_test.to_numpy().reshape(-1, 8, 8, 1)
 
 # 📊 Función para mostrar métricas y curva ROC
-def mostrar_resultados(nombre, y_pred, y_score):
-    report = classification_report(y_test, y_pred, output_dict=True)
+def mostrar_resultados(nombre, y_true, y_pred, y_score):
+    report = classification_report(y_true, y_pred, output_dict=True)
     st.write({
         "Accuracy": round(report["accuracy"], 3),
         "F1-score (Macro)": round(report["macro avg"]["f1-score"], 3),
         "Precision (Macro)": round(report["macro avg"]["precision"], 3)
     })
-    fpr, tpr, _ = roc_curve((y_test == 0), y_score)
+    fpr, tpr, _ = roc_curve((y_true == 0), y_score)
     roc_auc = auc(fpr, tpr)
     fig, ax = plt.subplots()
     ax.plot(fpr, tpr, label=f"AUC = {roc_auc:.2f}")
@@ -119,7 +121,7 @@ with tab1:
     if modelo_lr is not None:
         y_pred = modelo_lr.predict(X_pca_test)
         y_score = modelo_lr.predict_proba(X_pca_test)[:, 0]
-        mostrar_resultados("Logistic Regression", y_pred, y_score)
+        mostrar_resultados("Logistic Regression", y_test, y_pred, y_score)
     else:
         st.warning("⚠️ El modelo Logistic Regression no está disponible.")
 
@@ -128,15 +130,17 @@ with tab2:
     if modelo_rf is not None:
         y_pred = modelo_rf.predict(X_pca_test)
         y_score = modelo_rf.predict_proba(X_pca_test)[:, 0]
-        mostrar_resultados("Random Forest", y_pred, y_score)
+        mostrar_resultados("Random Forest", y_test, y_pred, y_score)
     else:
         st.warning("⚠️ El modelo Random Forest no está disponible.")
 
 with tab3:
-    st.markdown("### 📌 CNN (Entrada 16×16)")
+    st.markdown("### 📌 CNN (Entrada imagen 8x8)")
     if modelo_dl is not None:
-        y_pred = modelo_dl.predict(X_test_cnn).argmax(axis=1)
-        y_score = modelo_dl.predict(X_test_cnn)[:, 0]
-        mostrar_resultados("CNN", y_pred, y_score)
+        y_pred_full = modelo_dl.predict(X_test_cnn, batch_size=32).argmax(axis=1)
+        y_score_full = modelo_dl.predict(X_test_cnn, batch_size=32)[:, 0]
+        y_pred = y_pred_full[:len(y_test)]
+        y_score = y_score_full[:len(y_test)]
+        mostrar_resultados("CNN", y_test, y_pred, y_score)
     else:
         st.warning("⚠️ El modelo CNN no está disponible.")
