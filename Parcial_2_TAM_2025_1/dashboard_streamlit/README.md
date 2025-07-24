@@ -35,7 +35,8 @@ Preprocesado y proyectado en espacios de menor dimensión
 pip install streamlit scikit-learn umap-learn matplotlib pandas tensorflow joblib
 
 🚀 Despliegue automático (Streamlit Cloud)
-Disponible en: 🔗 https://share.streamlit.io/ivansst773/Aprendizaje_de_Maquina/...
+Disponible en: 🔗 [https://share.streamlit.io/ivansst773/Aprendizaje_de_Maquina/...](https://share.streamlit.io/ivansst773/Aprendizaje_de_Maquina/main/Parcial_2_TAM_2025_1/dashboard_streamlit/app.py
+)
 
 ## 👨‍💻 Autor
 
