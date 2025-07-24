@@ -87,16 +87,9 @@ tensorflow
 
 joblib
 
-📤 Entrega
-✅ Enviado vía GitHub y correo electrónico amalvarezme@unal.edu.co
-
-📆 Fecha límite: 17 de julio de 2025
-
-📁 Adjuntos: PDF teórico, notebook, dashboard, video
 
 👨‍💻 Autor
-IAN [Tu nombre completo aquí] Curso TAM – Universidad Nacional de Colombia – sede Manizales
-
+Edgar Ivan Calpa Cuacialpud CC 1004577329
 
 ---
 
