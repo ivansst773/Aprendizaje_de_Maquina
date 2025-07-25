@@ -1,63 +1,100 @@
 import streamlit as st
-import pickle
 import numpy as np
 import pandas as pd
+import pickle
+import matplotlib.pyplot as plt
 import os
 
-# 1) Función para cargar modelos en caché
+# 1. Carga de modelos
+BASE_DIR = os.path.dirname(__file__)
+MODEL_DIR = os.path.join(BASE_DIR, "modelos")
+
+model_paths = {
+    "Random Forest":       os.path.join(MODEL_DIR, "modelo_rf.pkl"),
+    "Logistic Regression": os.path.join(MODEL_DIR, "modelo_log.pkl"),
+    "MLPClassifier":       os.path.join(MODEL_DIR, "modelo_mlp.pkl"),
+}
+
 @st.cache_resource
 def load_model(path):
     with open(path, "rb") as f:
         return pickle.load(f)
 
-# 2) Rutas de los 3 modelos en tu carpeta `modelos/`
-MODEL_DIR = "modelos"
-model_paths = {
-    "Random Forest": os.path.join(MODEL_DIR, "modelo_rf.pkl"),
-    "Logistic Regression": os.path.join(MODEL_DIR, "modelo_log.pkl"),
-    "MLPClassifier": os.path.join(MODEL_DIR, "modelo_mlp.pkl"),
-}
-
-# 3) Carga todos los modelos
 models = {}
 for name, path in model_paths.items():
     if os.path.exists(path):
         models[name] = load_model(path)
     else:
-        st.error(f"❌ No se encontró {path}")
+        st.warning(f"⚠️ No se encontró: {path}")
 
-# 4) Interfaz Streamlit
-st.title("🩺 Clasificador PERG: Diagnóstico Oftalmológico")
+# 2. Interfaz principal
+st.title("🧠 Clasificador Educativo PERG")
+tab1, tab2, tab3 = st.tabs([
+    "📘 Explicación de Modelos",
+    "🩺 Diagnóstico del Paciente",
+    "📊 Comparación de Resultados"
+])
 
-st.sidebar.header("Selecciona modelo y parámetros")
+# 3. Explicación de modelos
+with tab1:
+    st.subheader("🎓 ¿Qué hacen estos modelos?")
+    st.markdown("""
+    **🔍 Regresión Logística**: modelo lineal que estima probabilidades usando funciones logísticas. Ideal para interpretar coeficientes.
 
-# 5) Selector de modelo
-model_name = st.sidebar.selectbox("Modelo", list(models.keys()))
-model = models.get(model_name)
+    **🌲 Random Forest**: conjunto de árboles de decisión que votan en grupo. Captura relaciones complejas y es robusto a ruido.
 
-# 6) Inputs del paciente
-RE_1       = st.sidebar.number_input("RE_1", value=0.0)
-LE_1       = st.sidebar.number_input("LE_1", value=0.0)
-RE_2       = st.sidebar.number_input("RE_2", value=0.0)
-LE_2       = st.sidebar.number_input("LE_2", value=0.0)
-RE_3       = st.sidebar.number_input("RE_3", value=0.0)
-LE_3       = st.sidebar.number_input("LE_3", value=0.0)
-age_years  = st.sidebar.number_input("Edad (años)", min_value=0, max_value=120, value=30)
-sex        = st.sidebar.selectbox("Sexo", ["Male", "Female"])
-sex_code   = 1 if sex == "Female" else 0
+    **🧠 MLPClassifier**: red neuronal multicapa que detecta patrones no lineales en los datos. Aprende representaciones internas.
 
-# 7) Botón de predicción
-if st.button("🔍 Predecir diagnóstico"):
-    X_new = np.array([[RE_1, LE_1, RE_2, LE_2, RE_3, LE_3, age_years, sex_code]])
-    pred_code = model.predict(X_new)[0]
-    st.success(f"Diagnóstico predicho con {model_name}: Clase **{pred_code}**")
+    Todos fueron entrenados sobre señales PERG + edad + sexo. Cada uno tiene ventajas distintas según el tipo de clase que se desea detectar.
+    """)
 
-    # Mostrar probabilidades si dispones de predict_proba
-    if hasattr(model, "predict_proba"):
-        proba = model.predict_proba(X_new)[0]
-        df_proba = pd.DataFrame(
-            proba.reshape(1, -1),
-            columns=[f"Clase {i}" for i in range(proba.shape[0])]
-        ).T
-        df_proba.columns = ["Probabilidad"]
-        st.dataframe(df_proba, width=200)
+# 4. Diagnóstico personalizado
+with tab2:
+    st.subheader("🧪 Ingresa parámetros clínicos")
+    RE_1 = st.number_input("RE_1", value=0.0)
+    LE_1 = st.number_input("LE_1", value=0.0)
+    RE_2 = st.number_input("RE_2", value=0.0)
+    LE_2 = st.number_input("LE_2", value=0.0)
+    RE_3 = st.number_input("RE_3", value=0.0)
+    LE_3 = st.number_input("LE_3", value=0.0)
+    age  = st.number_input("Edad", min_value=0, max_value=120, value=30)
+    sex  = st.selectbox("Sexo", ["Male", "Female"])
+    sex_code = 1 if sex == "Female" else 0
+
+    X_new = np.array([[RE_1, LE_1, RE_2, LE_2, RE_3, LE_3, age, sex_code]])
+
+    if st.button("📤 Predecir con todos los modelos"):
+        comparacion = []
+        for nombre, modelo in models.items():
+            clase = modelo.predict(X_new)[0]
+            fila = {"Modelo": nombre, "Clase predicha": clase}
+            if hasattr(modelo, "predict_proba"):
+                probs = modelo.predict_proba(X_new)[0]
+                for i, p in enumerate(probs):
+                    fila[f"Clase {i} (%)"] = round(p * 100, 2)
+            comparacion.append(fila)
+
+        st.success("✅ Resultados de los 3 modelos")
+        df_comp = pd.DataFrame(comparacion)
+        st.dataframe(df_comp)
+
+        st.session_state["comparacion"] = comparacion
+        st.session_state["X_new"] = X_new
+
+# 5. Comparación visual
+with tab3:
+    st.subheader("📈 Gráfica de probabilidades por modelo")
+    if "comparacion" in st.session_state:
+        fig, ax = plt.subplots(figsize=(8,5))
+        for fila in st.session_state["comparacion"]:
+            modelo = fila["Modelo"]
+            y = [fila.get(f"Clase {i} (%)", 0) for i in range(len(fila) - 2)]
+            x = [f"Clase {i}" for i in range(len(y))]
+            ax.plot(x, y, marker="o", label=modelo)
+
+        ax.set_ylabel("Probabilidad (%)")
+        ax.set_title("Distribución de probabilidades")
+        ax.legend()
+        st.pyplot(fig)
+    else:
+        st.info("Primero genera una predicción en la pestaña anterior.")
