@@ -13,7 +13,7 @@ Dashboard interactivo para el análisis, comparación y explicación de modelos 
 Accede directamente desde Streamlit Cloud:
 
 👉 Abrir aplicación ( https://share.streamlit.io/ivansst773/aprendizaje_de_maquina/main/Proyecto/Dashboard_Streamlit/streamlit_app.py)
-aprendizajedemaquina-hgj8adafx7dgmegxqp7apj.streamlit.app
+(aprendizajedemaquina-hgj8adafx7dgmegxqp7apj.streamlit.app)
 
 🚀 ¿Qué modelos se usan?
 La aplicación compara tres clasificadores entrenados con scikit-learn:
