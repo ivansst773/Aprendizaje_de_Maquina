@@ -98,3 +98,35 @@ with tab3:
         st.pyplot(fig)
     else:
         st.info("Primero genera una predicción en la pestaña anterior.")
+
+tab4 = st.tab("🧾 Interpretación técnica de resultados")
+
+with tab4:
+    st.subheader("🧠 Análisis comparativo entre modelos")
+    if "comparacion" in st.session_state and "X_new" in st.session_state:
+        for fila in st.session_state["comparacion"]:
+            st.markdown(f"### 🔬 Modelo: {fila['Modelo']}")
+            st.markdown(f"**Clase predicha:** {fila['Clase predicha']}")
+            st.markdown("**Probabilidades por clase:**")
+            probs = [v for k, v in fila.items() if "Clase" in k and "(%)" in k]
+            clases = [k for k in fila.keys() if "Clase" in k and "(%)" in k]
+
+            df_probs = pd.DataFrame({
+                "Clase": clases,
+                "Probabilidad (%)": probs
+            })
+            st.dataframe(df_probs)
+
+            interpretacion = ""
+            max_prob = max(probs)
+            if max_prob < 50:
+                interpretacion = "🔎 El modelo muestra incertidumbre elevada (ninguna clase supera 50%). Puede ser útil revisar el preprocesamiento o entrenar con más datos."
+            elif max_prob >= 90:
+                interpretacion = "✅ Predicción muy segura. El modelo asigna alta probabilidad a una clase específica."
+            else:
+                interpretacion = "🤔 La predicción muestra cierto sesgo, pero no es completamente concluyente. Puede usarse como apoyo clínico."
+
+            st.info(interpretacion)
+    else:
+        st.warning("Genera primero una predicción para ver la interpretación.")
+
