@@ -5,19 +5,24 @@ import pandas as pd
 import os
 
 # ——————————————————————
+# 0) Ruta absoluta base desde donde corre el script
+# ——————————————————————
+BASE_DIR = os.path.dirname(__file__)
+MODEL_DIR = os.path.join(BASE_DIR, "modelos")
+
+# ——————————————————————
 # Debug: mostrar carpeta de trabajo y contenido
 # ——————————————————————
-st.write("Directorio de trabajo:", os.getcwd())
-st.write("Contenido raíz:", os.listdir("."))
-if os.path.isdir("modelos"):
-    st.write("Contenido de `modelos/`:", os.listdir("modelos"))
+st.write("📁 Directorio raíz del script:", BASE_DIR)
+st.write("📁 Contenido raíz:", os.listdir(BASE_DIR))
+if os.path.isdir(MODEL_DIR):
+    st.write("📁 Contenido de `modelos/`:", os.listdir(MODEL_DIR))
 else:
     st.error("❌ La carpeta `modelos/` NO existe en el deploy")
 
 # ——————————————————————
 # 1) Configuración de rutas
 # ——————————————————————
-MODEL_DIR = "modelos"
 model_paths = {
     "Random Forest":       os.path.join(MODEL_DIR, "modelo_rf.pkl"),
     "Logistic Regression": os.path.join(MODEL_DIR, "modelo_log.pkl"),
@@ -29,8 +34,12 @@ model_paths = {
 # ——————————————————————
 @st.cache_resource
 def load_model(path):
-    with open(path, "rb") as f:
-        return pickle.load(f)
+    try:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    except Exception as e:
+        st.error(f"⚠️ Error al cargar {os.path.basename(path)}: {e}")
+        return None
 
 # ——————————————————————
 # 3) Cargar todos los modelos disponibles
@@ -38,11 +47,12 @@ def load_model(path):
 models = {}
 for name, path in model_paths.items():
     if os.path.exists(path):
-        models[name] = load_model(path)
+        modelo = load_model(path)
+        if modelo:
+            models[name] = modelo
     else:
         st.error(f"❌ No se encontró el fichero de modelo: {path}")
 
-# Si ningún modelo quedó cargado, detenemos la app
 if not models:
     st.stop()
 
@@ -53,7 +63,7 @@ st.title("🩺 Clasificador PERG: Diagnóstico Oftalmológico")
 st.sidebar.header("Configuración de predicción")
 
 # 5) Selector de modelo
-model_name = st.sidebar.selectbox("Elige el modelo", list(models.keys()))
+model_name = st.sidebar.selectbox("🔍 Elige el modelo", list(models.keys()))
 model = models[model_name]
 
 # 6) Entradas del usuario
@@ -68,14 +78,14 @@ sex       = st.sidebar.selectbox("Sexo", ["Male", "Female"])
 sex_code  = 1 if sex == "Female" else 0
 
 # 7) Botón de predicción
-if st.sidebar.button("🔍 Predecir diagnóstico"):
+if st.sidebar.button("🔮 Predecir diagnóstico"):
 
     # Construir vector de características
     X_new = np.array([[RE_1, LE_1, RE_2, LE_2, RE_3, LE_3, age_years, sex_code]])
 
     # Predicción
     pred_code = model.predict(X_new)[0]
-    st.success(f"Diagnóstico predicho con **{model_name}**: Clase **{pred_code}**")
+    st.success(f"✅ Diagnóstico predicho con **{model_name}**: Clase **{pred_code}**")
 
     # Mostrar probabilidades si están disponibles
     if hasattr(model, "predict_proba"):
@@ -83,4 +93,5 @@ if st.sidebar.button("🔍 Predecir diagnóstico"):
         df_proba = pd.DataFrame(proba.reshape(1, -1),
                                 columns=[f"Clase {i}" for i in range(len(proba))]).T
         df_proba.columns = ["Probabilidad"]
-        st.dataframe(df_proba, width=200)
+        st.subheader("📊 Probabilidades del modelo")
+        st.dataframe(df_proba, width=250)
