@@ -29,10 +29,11 @@ for name, path in model_paths.items():
 
 # 2. Interfaz principal
 st.title("🧠 Clasificador Educativo PERG")
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "📘 Explicación de Modelos",
     "🩺 Diagnóstico del Paciente",
-    "📊 Comparación de Resultados"
+    "📊 Comparación de Resultados",
+    "🧾 Interpretación técnica de resultados"
 ])
 
 # 3. Explicación de modelos
@@ -99,8 +100,7 @@ with tab3:
     else:
         st.info("Primero genera una predicción en la pestaña anterior.")
 
-tab4 = st.tab("🧾 Interpretación técnica de resultados")
-
+# 6. Interpretación técnica
 with tab4:
     st.subheader("🧠 Análisis comparativo entre modelos")
     if "comparacion" in st.session_state and "X_new" in st.session_state:
@@ -129,4 +129,3 @@ with tab4:
             st.info(interpretacion)
     else:
         st.warning("Genera primero una predicción para ver la interpretación.")
-
