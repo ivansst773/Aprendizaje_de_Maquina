@@ -2,11 +2,11 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import pickle
-import os
 import matplotlib.pyplot as plt
+import os
 
 # ————————————————————————————————
-# 1. Ruta base y modelos
+# 1. Carga de Modelos
 # ————————————————————————————————
 BASE_DIR = os.path.dirname(__file__)
 MODEL_DIR = os.path.join(BASE_DIR, "modelos")
@@ -27,19 +27,42 @@ for name, path in model_paths.items():
     if os.path.exists(path):
         models[name] = load_model(path)
     else:
-        st.warning(f"❗ Fichero no encontrado: {path}")
+        st.warning(f"⚠️ No se encontró el modelo: {path}")
 
 # ————————————————————————————————
-# 2. Título y descripción
+# 2. Interfaz Principal con Pestañas
 # ————————————————————————————————
-st.title("🩺 Clasificador PERG — Comparación Multimodelo")
-st.markdown("Introduce los parámetros del paciente para ver cómo cada modelo clasifica su diagnóstico, con probabilidades visualizadas.")
+st.title("🧠 App Educativa — Clasificación de Señales PERG")
+tab1, tab2, tab3 = st.tabs(["📚 Explicación de Modelos", "🔍 Simulación Diagnóstico", "📊 Comparación Visual"])
 
 # ————————————————————————————————
-# 3. Entrada de paciente
+# 3. Pestaña Explicativa
 # ————————————————————————————————
-with st.sidebar:
-    st.header("⚙️ Parámetros del Paciente")
+with tab1:
+    st.header("📘 ¿Qué modelos estás usando?")
+    st.markdown("""
+    Esta app utiliza tres clasificadores entrenados sobre señales PERG y metadatos clínicos:
+    
+    #### 🎄 Random Forest
+    - Basado en árboles de decisión que votan en conjunto
+    - Resiste sobreajuste y se adapta a patrones complejos
+
+    #### 📈 Regresión Logística Multiclase
+    - Modelo lineal con alta interpretabilidad
+    - Usa funciones logísticas para estimar probabilidades
+
+    #### 🧠 MLPClassifier
+    - Red neuronal multicapa
+    - Detecta relaciones no lineales entre variables
+
+    Cada modelo fue entrenado con `StandardScaler`, validado con `Accuracy`, `F1-macro` y serializado con `pickle`.
+    """)
+
+# ————————————————————————————————
+# 4. Pestaña Interactiva
+# ————————————————————————————————
+with tab2:
+    st.header("🩺 Diagnóstico del Paciente")
 
     RE_1      = st.number_input("RE_1",      value=0.0, format="%.4f")
     LE_1      = st.number_input("LE_1",      value=0.0, format="%.4f")
@@ -47,38 +70,44 @@ with st.sidebar:
     LE_2      = st.number_input("LE_2",      value=0.0, format="%.4f")
     RE_3      = st.number_input("RE_3",      value=0.0, format="%.4f")
     LE_3      = st.number_input("LE_3",      value=0.0, format="%.4f")
-    age_years = st.number_input("Edad (años)", min_value=0, max_value=120, value=30)
+    age_years = st.number_input("Edad",      min_value=0, max_value=120, value=30)
     sex       = st.selectbox("Sexo", ["Male", "Female"])
     sex_code  = 1 if sex == "Female" else 0
 
-    if st.button("🔍 Comparar Modelos"):
-        X_new = np.array([[RE_1, LE_1, RE_2, LE_2, RE_3, LE_3, age_years, sex_code]])
+    X_new = np.array([[RE_1, LE_1, RE_2, LE_2, RE_3, LE_3, age_years, sex_code]])
 
-        # Tabla de resultados
+    st.markdown("Haz click abajo para predecir con cada modelo:")
+    if st.button("🚀 Generar Diagnóstico"):
         comparacion = []
         for name, model in models.items():
             pred = model.predict(X_new)[0]
-            fila = {"Modelo": name, "Clase Predicha": pred}
+            result = {"Modelo": name, "Predicción": pred}
             if hasattr(model, "predict_proba"):
                 proba = model.predict_proba(X_new)[0]
                 for i, p in enumerate(proba):
-                    fila[f"Clase {i} (%)"] = round(p * 100, 2)
-            comparacion.append(fila)
+                    result[f"Clase {i} (%)"] = round(p*100,2)
+            comparacion.append(result)
 
         df_comp = pd.DataFrame(comparacion)
-        st.subheader("📋 Predicción de Cada Modelo")
+        st.success("✅ Comparación de Modelos")
         st.dataframe(df_comp)
 
-        # Gráfica comparativa
-        st.subheader("📈 Probabilidades por Modelo")
-        fig, ax = plt.subplots(figsize=(8, 4))
+# ————————————————————————————————
+# 5. Pestaña Visual Comparativa
+# ————————————————————————————————
+with tab3:
+    st.header("📊 Distribución de Probabilidades por Modelo")
+    if "comparacion" in locals():
+        fig, ax = plt.subplots(figsize=(8,5))
         for fila in comparacion:
-            nombre = fila["Modelo"]
-            probs = [fila.get(f"Clase {i} (%)", 0) for i in range(len(proba))]
-            ax.plot(range(len(probs)), probs, marker='o', label=nombre)
+            modelo = fila["Modelo"]
+            y = [fila.get(f"Clase {i} (%)", 0) for i in range(len(proba))]
+            x = [f"Clase {i}" for i in range(len(proba))]
+            ax.plot(x, y, marker='o', label=modelo)
 
-        ax.set_xlabel("Clases")
         ax.set_ylabel("Probabilidad (%)")
-        ax.set_title("Distribución de Probabilidades")
+        ax.set_title("Comparación Multiclase")
         ax.legend()
         st.pyplot(fig)
+    else:
+        st.info("⚠️ Genera primero una predicción para visualizar los resultados.")
